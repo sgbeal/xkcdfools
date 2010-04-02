@@ -48,7 +48,7 @@ var TerminalShell = {
 			var cmd_name = cmd_args.shift();
 			cmd_args.unshift(terminal);
 			this.lastCommand = cmd;
-			if (cmd_name in this.commands) {
+			if (this.commands.hasOwnProperty(cmd_name)) {
 				this.commands[cmd_name].apply(this, cmd_args);
 			} else {
 				if (!(this.fallback && this.fallback(terminal, cmd))) {
@@ -486,44 +486,55 @@ var Terminal = {
 	},
 
         /**
-           Runs the given command. After it is run (if it is run and
-           returns), if onCompletion is-a Function then it is called
-           and passed this object.
+           Runs a command in the form "command [arg1 ... argN]".
+           After it is run (if it is run and returns), if onCompletion
+           is-a Function then it is called and passed this object.
 
+           If command is an array it is assumed to be a list of
+           command strings and they are run in order (stopping if any
+           of them throws an exception). If
+           
            TODO: refactor this to:
-
-           - optionally take an array of arguments, to avoid
-           tokenization problems.
 
            - Do smarter tokenization by default, instead of simply
            split()ing on spaces.
         */
-	runCommand: function(text,onCompletion) {
-		var index = 0;
-		var mine = false;
-		
+	runCommand: function(command,onCompletion) {
 		this.promptActive = false;
                 var self = this;
-		var interval = window.setInterval($.proxy(function typeCharacter() {
-			if (index < text.length) {
-				this.addCharacter(text.charAt(index));
-				index += 1;
-			} else {
-				clearInterval(interval);
-				this.promptActive = true;
-				this.processInputBuffer();
-                                if( onCompletion instanceof Function )
-                                {
-                                    onCompletion(self);
-                                }
-			}
-		}, this), this.config.typingSpeed);
+                function doList(av)
+                {
+                    var index = 0;
+                    var item = av[0];
+                    av.shift();
+                    var interval = window.setInterval(
+                           $.proxy(function typeCharacter() {
+                                       if (index < item.length) {
+                                           self.addCharacter(item.charAt(index));
+                                           index += 1;
+                                       } else {
+                                           clearInterval(interval);
+                                           self.processInputBuffer();
+                                           if( av.length ) return doList(av);
+                                           self.promptActive = true;
+                                           if( onCompletion instanceof Function )
+                                           {
+                                               onCompletion(self);
+                                           }
+                                       }
+                                   }, self), self.config.typingSpeed);
+                }
+                if( ! jQuery.isArray(command) )
+                {
+                    var x = ''+command;
+                    command = [x];
+                }
+                doList(command);
 	}
 };
 
 jQuery(document).ready(function() {
-	$('#welcome').show();
-	// Kill Opera's backspace keyboard action.
-	document.onkeydown = document.onkeypress = function(e) { return $.hotkeys.specialKeys[e.keyCode] != 'backspace'; };
-	Terminal.init();
+    // Kill Opera's backspace keyboard action.          
+    document.onkeydown = document.onkeypress = function(e) { return $.hotkeys.specialKeys[e.keyCode] != 'backspace'; };
+    Terminal.init();
 });
