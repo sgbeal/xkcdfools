@@ -229,7 +229,7 @@ var Terminal = {
 
 		this.setCursorState(true);
 		this.setWorking(false);
-		jQuery(this.config.select.prompt).html(this.config.prompt);
+		jQuery(this.config.select.prompt).empty().append(this.config.prompt);
 		jqscr.hide().fadeIn('fast', function() {
 			jqscr.triggerHandler('cli-load');
 		});
@@ -288,7 +288,7 @@ var Terminal = {
 			jqcurs.html('&nbsp;');
 		}
 		jQuery(this.config.select.rCommand).text(right);
-		jQuery(this.config.select.prompt).text(this.config.prompt);
+		jQuery(this.config.select.prompt).empty().append(this.config.prompt);
 		return;
 	},
 	
@@ -445,7 +445,7 @@ var Terminal = {
                  : '';
         },
 	processInputBuffer: function() {
-		this.print(jQuery('<p>').addClass('command').text(this.config.prompt + this.buffer));
+    this.print(jQuery('<p>').addClass('command').append(jQuery(this.config.prompt).clone()).append(this.buffer));
                 var cmd = this.trim(this.buffer);
                 this.clearInputBuffer();
 		if (cmd.length == 0) {
