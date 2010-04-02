@@ -415,10 +415,6 @@ var Terminal = {
             var av = Array.prototype.slice.call(arguments, [0]);
             var i = 0;
             for( ; i<av.length; ++i ) {
-                if( this.print.KLUDGE )
-                {
-                    this.print.KLUDGE( 'av#'+i+"="+av[i]);
-                }
                 prpush( out, av[i] );
                 if( i != (av.length-1) ) prpush(out, ' ');
             }
@@ -445,7 +441,10 @@ var Terminal = {
                  : '';
         },
 	processInputBuffer: function() {
-    this.print(jQuery('<p>').addClass('command').append(jQuery(this.config.prompt).clone()).append(this.buffer));
+                var prompt = (this.config.prompt instanceof jQuery)
+                    ? this.config.prompt.clone(/*clone needed to avoid event-handling weirdness*/)
+                    : ''+this.config.prompt;
+                this.print(jQuery('<p>').addClass('command').append(prompt).append(this.buffer));
                 var cmd = this.trim(this.buffer);
                 this.clearInputBuffer();
 		if (cmd.length == 0) {
