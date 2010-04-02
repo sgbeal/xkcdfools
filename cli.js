@@ -6,55 +6,23 @@
  jQuery rewrite and overhaul
  Chromakode, 2010
  http://www.chromakode.com/
+
+ Minor hacking/extensions added Stephan Beal, 2010.
+ http://wanderinghorse.net/
+
 */
-
-/**** start from http://snippets.dzone.com/posts/show/701 ****/
-// Removes leading whitespaces
-function ltrim(value) {
-	if (value) {
-		var re = /\s*((\S+\s*)*)/;
-		return value.replace(re, '$1');
-	}
-	return '';
-}
-
-// Removes ending whitespaces
-function rtrim(value) {
-	if (value) {
-		var re = /((\s*\S+)*)\s*/;
-		return value.replace(re, '$1');
-	}
-	return '';
-}
-
-// Removes leading and ending whitespaces
-function trim(value) {
-	if (value) {
-		return ltrim(rtrim(value));
-	}
-	return '';
-} /**** end from http://snippets.dzone.com/posts/show/701 ****/
-
-function entityEncode(str) {
-	str = str.replace(/&/g, '&amp;');
-	str = str.replace(/</g, '&lt;');
-	str = str.replace(/>/g, '&gt;');
-	str = str.replace(/  /g, ' &nbsp;');
-	if (/msie/i.test(navigator.userAgent)) {
-		str = str.replace('\n', '&nbsp;<br />');
-	} else {
-		str = str.replace(/\x0D/g, '&nbsp;<br />');
-	}
-	return str;
-}
 
 var TerminalShell = {
 	commands: {
 		help: function help(terminal) {
-			terminal.print($('<h3>help</h3>'));
-			cmd_list = $('<ul>');
+			terminal.print(jQuery('<h3>Available commands:</h3>'));
+			cmd_list = jQuery('<ul>');
 			$.each(this.commands, function(name, func) {
-				cmd_list.append($('<li>').text(name));
+                                   if( 'shortHelp' in func )
+                                   {
+                                       name = name + '&nbsp;&nbsp;--&gt;&nbsp;&nbsp;'+func.shortHelp;
+                                   }
+                                   cmd_list.append(jQuery('<li>').html(name));
 			});
 			terminal.print(cmd_list);
 		}, 
@@ -74,6 +42,7 @@ var TerminalShell = {
 			var cmd_args = cmd.split(' ');
 			var cmd_name = cmd_args.shift();
 			cmd_args.unshift(terminal);
+			this.lastCommand = cmd;
 			if (cmd_name in this.commands) {
 				this.commands[cmd_name].apply(this, cmd_args);
 			} else {
@@ -81,9 +50,8 @@ var TerminalShell = {
 					terminal.print('Unrecognized command. Type "help" for assistance.');
 				}
 			}
-			this.lastCommand = cmd;
 		} catch (e) {
-			terminal.print($('<p>').addClass('error').text('An internal error occured: '+e));
+			terminal.print(jQuery('<p>').addClass('error').text('Command "'+cmd+'" threw: '+e));
 			terminal.setWorking(false);
 		}
 	}
@@ -109,10 +77,21 @@ var Terminal = {
 		fg_color:			'#FFF',
 		cursor_blink_time:	700,
 		cursor_style:		'block',
-		prompt:				'guest@xkcd:/$ ',
+		prompt:				'guest@console:/$ ',
 		spinnerCharacters:	['[   ]','[.  ]','[.. ]','[...]'],
 		spinnerSpeed:		250,
-		typingSpeed:		50
+		typingSpeed:		50,
+                select:{
+                    screen:'#screen',
+                    display:'#display',
+                    prompt:'#prompt',
+                    cursor:'#cursor',
+                    inLine:'#inputline',
+                    bottomLine:'#bottomline',
+                    spinner:'#spinner',
+                    lCommand:'#lcommand',
+                    rCommand:'#rcommand'
+                }
 	},
 	
 	sticky: {
@@ -124,7 +103,7 @@ var Terminal = {
 		
 		set: function(key, state) {
 			this.keys[key] = state;
-			$('#'+key+'-indicator').toggle(this.keys[key]);
+			jQuery('#'+key+'-indicator').toggle(this.keys[key]);
 		},
 		
 		toggle: function(key) {
@@ -143,15 +122,15 @@ var Terminal = {
 	},
 	
 	init: function() {
+                var term = this;
 		function ifActive(func) {
 			return function() {
-				if (Terminal.promptActive) {
+				if (term.promptActive) {
 					func.apply(this, arguments);
 				}
 			};
 		}
-		
-		$(document)
+		jQuery(document)
 			.keypress($.proxy(ifActive(function(e) {	
 				if (e.which >= 32 && e.which <= 126) {   
 					var character = String.fromCharCode(e.which);
@@ -168,7 +147,7 @@ var Terminal = {
 					if (letter == 'w') {
 						this.deleteWord();
 					} else if (letter == 'h') {
-						Terminal.deleteCharacter(false);
+						term.deleteCharacter(false);
 					} else if (letter == 'l') {
 						this.clear();
 					} else if (letter == 'a') {
@@ -185,47 +164,47 @@ var Terminal = {
 					}
 				}
 			}), this))
-			.bind('keydown', 'return', ifActive(function(e) { Terminal.processInputBuffer(); }))
-			.bind('keydown', 'backspace', ifActive(function(e) { e.preventDefault();	Terminal.deleteCharacter(e.shiftKey); }))
-			.bind('keydown', 'del', ifActive(function(e) { Terminal.deleteCharacter(true); }))
-			.bind('keydown', 'left', ifActive(function(e) { Terminal.moveCursor(-1); }))
-			.bind('keydown', 'right', ifActive(function(e) { Terminal.moveCursor(1); }))
+			.bind('keydown', 'return', ifActive(function(e) { term.processInputBuffer(); }))
+			.bind('keydown', 'backspace', ifActive(function(e) { e.preventDefault();	term.deleteCharacter(e.shiftKey); }))
+			.bind('keydown', 'del', ifActive(function(e) { term.deleteCharacter(true); }))
+			.bind('keydown', 'left', ifActive(function(e) { term.moveCursor(-1); }))
+			.bind('keydown', 'right', ifActive(function(e) { term.moveCursor(1); }))
 			.bind('keydown', 'up', ifActive(function(e) {
 				e.preventDefault();
-				if (e.shiftKey || Terminal.sticky.keys.scroll) {
-					Terminal.scrollLine(-1);
-				} else if (e.ctrlKey || Terminal.sticky.keys.ctrl) {
-					Terminal.scrollPage(-1);
+				if (e.shiftKey || term.sticky.keys.scroll) {
+					term.scrollLine(-1);
+				} else if (e.ctrlKey || term.sticky.keys.ctrl) {
+					term.scrollPage(-1);
 				} else {
-					Terminal.moveHistory(-1);
+					term.moveHistory(-1);
 				}
 			}))
 			.bind('keydown', 'down', ifActive(function(e) {
 				e.preventDefault();
-				if (e.shiftKey || Terminal.sticky.keys.scroll) {
-					Terminal.scrollLine(1);
-				} else if (e.ctrlKey || Terminal.sticky.keys.ctrl) {
-					Terminal.scrollPage(1);
+				if (e.shiftKey || term.sticky.keys.scroll) {
+					term.scrollLine(1);
+				} else if (e.ctrlKey || term.sticky.keys.ctrl) {
+					term.scrollPage(1);
 				} else {
-					Terminal.moveHistory(1);
+					term.moveHistory(1);
 				}
 			}))
-			.bind('keydown', 'pageup', ifActive(function(e) { Terminal.scrollPage(-1); }))
-			.bind('keydown', 'pagedown', ifActive(function(e) { Terminal.scrollPage(1); }))
+			.bind('keydown', 'pageup', ifActive(function(e) { term.scrollPage(-1); }))
+			.bind('keydown', 'pagedown', ifActive(function(e) { term.scrollPage(1); }))
 			.bind('keydown', 'home', ifActive(function(e) {
 				e.preventDefault();
-				if (e.ctrlKey || Terminal.sticky.keys.ctrl) {
-					Terminal.jumpToTop();
+				if (e.ctrlKey || term.sticky.keys.ctrl) {
+					term.jumpToTop();
 				} else {
-					Terminal.setPos(0);
+					term.setPos(0);
 				}
 			}))
 			.bind('keydown', 'end', ifActive(function(e) {
 				e.preventDefault();
-				if (e.ctrlKey || Terminal.sticky.keys.ctrl) {
-					Terminal.jumpToBottom();
+				if (e.ctrlKey || term.sticky.keys.ctrl) {
+					term.jumpToBottom();
 				} else {
-					Terminal.setPos(Terminal.buffer.length);
+					term.setPos(term.buffer.length);
 				}
 			}))
 			.bind('keydown', 'tab', function(e) {
@@ -234,35 +213,37 @@ var Terminal = {
 			.keyup(function(e) {
 				var keyName = $.hotkeys.specialKeys[e.which];
 				if (keyName in {'ctrl':true, 'alt':true, 'scroll':true}) {
-					Terminal.sticky.toggle(keyName);
+					term.sticky.toggle(keyName);
 				} else if (!(keyName in {'left':true, 'right':true, 'up':true, 'down':true})) {
-					Terminal.sticky.resetAll();
+					term.sticky.resetAll();
 				}
 			});
-		
-		$(window).resize(function(e) { $('#screen').scrollTop($('#screen').attr('scrollHeight')); });
+
+                var jqscr = jQuery(this.config.select.screen);
+		jQuery(window).resize(function(e) { jqscr.scrollTop(jqscr.attr('scrollHeight')); });
 
 		this.setCursorState(true);
 		this.setWorking(false);
-		$('#prompt').html(this.config.prompt);
-		$('#screen').hide().fadeIn('fast', function() {
-			$('#screen').triggerHandler('cli-load');
+		jQuery(this.config.select.prompt).html(this.config.prompt);
+		jqscr.hide().fadeIn('fast', function() {
+			jqscr.triggerHandler('cli-load');
 		});
 	},
 	
 	setCursorState: function(state, fromTimeout) {
 		this.cursorBlinkState = state;
+                var jqcurs = jQuery(this.config.select.cursor);
 		if (this.config.cursor_style == 'block') {
 			if (state) {
-				$('#cursor').css({color:this.config.bg_color, backgroundColor:this.config.fg_color});
+				jQuery(jqcurs).css({color:this.config.bg_color, backgroundColor:this.config.fg_color});
 			} else {
-				$('#cursor').css({color:this.config.fg_color, background:'none'});
+				jQuery(jqcurs).css({color:this.config.fg_color, background:'none'});
 			}
 		} else {
 			if (state) {
-				$('#cursor').css('textDecoration', 'underline');
+				jQuery(jqcurs).css('textDecoration', 'underline');
 			} else {
-				$('#cursor').css('textDecoration', 'none');
+				jQuery(jqcurs).css('textDecoration', 'none');
 			}
 		}
 		
@@ -295,13 +276,14 @@ var Terminal = {
 			right = this.buffer.substr(this.pos + 1, this.buffer.length - this.pos - 1);
 		}
 
-		$('#lcommand').text(left);
-		$('#cursor').text(underCursor);
+                var jqcurs = jQuery(this.config.select.cursor);
+		jQuery(this.config.select.lCommand).text(left);
+		jqcurs.text(underCursor);
 		if (underCursor == ' ') {
-			$('#cursor').html('&nbsp;');
+			jqcurs.html('&nbsp;');
 		}
-		$('#rcommand').text(right);
-		$('#prompt').text(this.config.prompt);
+		jQuery(this.config.select.rCommand).text(right);
+		jQuery(this.config.select.prompt).text(this.config.prompt);
 		return;
 	},
 	
@@ -312,7 +294,7 @@ var Terminal = {
 	},
 	
 	clear: function() {
-		$('#display').html('');
+		jQuery(this.config.select.display).html('');
 	},
 	
 	addCharacter: function(character) {
@@ -358,7 +340,7 @@ var Terminal = {
 	setPos: function(pos) {
 		if ((pos >= 0) && (pos <= this.buffer.length)) {
 			this.pos = pos;
-			Terminal.updateInputDisplay();
+			this.updateInputDisplay();
 		}
 		this.setCursorState(true);
 	},
@@ -384,37 +366,83 @@ var Terminal = {
 	},
 
 	jumpToBottom: function() {
-		$('#screen').animate({scrollTop: $('#screen').attr('scrollHeight')}, this.config.scrollSpeed, 'linear');
+                var jqscr = jQuery(this.config.select.screen);
+		jqscr.animate({scrollTop: jqscr.attr('scrollHeight')}, this.config.scrollSpeed, 'linear');
 	},
 
 	jumpToTop: function() {
-		$('#screen').animate({scrollTop: 0}, this.config.scrollSpeed, 'linear');
+                var jqscr = jQuery(this.config.select.screen);
+		jqscr.animate({scrollTop: 0}, this.config.scrollSpeed, 'linear');
 	},
 	
 	scrollPage: function(num) {
-		$('#screen').animate({scrollTop: $('#screen').scrollTop() + num * ($('#screen').height() * .75)}, this.config.scrollSpeed, 'linear');
+                var jqscr = jQuery(this.config.select.screen);
+		jqscr.animate({scrollTop: jqscr.scrollTop() + num * (jqscr.height() * .75)}, this.config.scrollSpeed, 'linear');
 	},
 
 	scrollLine: function(num) {
-		$('#screen').scrollTop($('#screen').scrollTop() + num * this.config.scrollStep);
+                var jqscr = jQuery(this.config.select.screen);
+		jqscr.scrollTop(jqscr.scrollTop() + num * this.config.scrollStep);
 	},
 
-	print: function(text) {
-		if (!text) {
-			$('#display').append($('<div>'));
-		} else if( text instanceof jQuery ) {
-			$('#display').append(text);
-		} else {
-			var av = Array.prototype.slice.call(arguments, 0);
-			$('#display').append($('<p>').text(av.join(' ')));
-		}
-		this.jumpToBottom();
+	print: function() {
+            var prpush = arguments.callee.prpush;
+            var pr = arguments.callee.pr;
+            var self = this;
+            if( ! prpush );
+            {
+                prpush = arguments.callee.prpush = function(jout,item) {
+                    if( item instanceof Function ) item = item();
+                    //if( jQuery.isArray(item) ) item = item.join(' ');
+                    if( item ) jout.append(item);
+                }
+                pr = arguments.callee.pr = function(obj) {
+                    jQuery(self.config.select.display).append(obj);
+                    self.jumpToBottom();
+                }
+
+            }
+            var out = jQuery('<div>');
+            if(! arguments.length) {
+                pr(out);
+                return;
+            }
+            var av = Array.prototype.slice.call(arguments, [0]);
+            var i = 0;
+            for( ; i<av.length; ++i ) {
+                if( this.print.KLUDGE )
+                {
+                    this.print.KLUDGE( 'av#'+i+"="+av[i]);
+                }
+                prpush( out, av[i] );
+                if( i != (av.length-1) ) prpush(out, ' ');
+            }
+            pr(out);
 	},
-	
-	processInputBuffer: function(cmd) {
-		this.print($('<p>').addClass('command').text(this.config.prompt + this.buffer));
-		var cmd = trim(this.buffer);
-		this.clearInputBuffer();
+        ltrim:function (value) {
+             if (value) {
+                 var re = /\s*((\S+\s*)*)/;
+                 return value.replace(re, '$1');
+             }
+             return '';
+        },
+        rtrim:function(value) {
+            /* rtrim(), ltrim(), trim() came from http://snippets.dzone.com/posts/show/701 */
+	    if (value) {
+                var re = /((\s*\S+)*)\s*/;
+                return value.replace(re, '$1');
+            }
+            return '';
+        },
+	trim:function(value) {
+                 return (value)
+                 ? this.ltrim(this.rtrim(value))
+                 : '';
+        },
+	processInputBuffer: function() {
+		this.print(jQuery('<p>').addClass('command').text(this.config.prompt + this.buffer));
+                var cmd = this.trim(this.buffer);
+                this.clearInputBuffer();
 		if (cmd.length == 0) {
 			return false;
 		}
@@ -428,35 +456,49 @@ var Terminal = {
 	
 	setPromptActive: function(active) {
 		this.promptActive = active;
-		$('#inputline').toggle(this.promptActive);
+		jQuery(this.config.select.inLine).toggle(this.promptActive);
 	},
 	
 	setWorking: function(working) {
 		if (working && !this._spinnerTimeout) {
-			$('#display .command:last-child').add('#bottomline').first().append($('#spinner'));
+			jQuery(this.config.select.display+' .command:last-child').add(this.config.select.bottomLine).first().append(jQuery(this.config.select.spinner));
 			this._spinnerTimeout = window.setInterval($.proxy(function() {
-				if (!$('#spinner').is(':visible')) {
-					$('#spinner').fadeIn();
+				if (!jQuery(this.config.select.spinner).is(':visible')) {
+					jQuery(this.config.select.spinner).fadeIn();
 				}
 				this.spinnerIndex = (this.spinnerIndex + 1) % this.config.spinnerCharacters.length;
-				$('#spinner').text(this.config.spinnerCharacters[this.spinnerIndex]);
+				jQuery(this.config.select.spinner).text(this.config.spinnerCharacters[this.spinnerIndex]);
 			},this), this.config.spinnerSpeed);
 			this.setPromptActive(false);
-			$('#screen').triggerHandler('cli-busy');
+			jQuery(this.config.select.screen).triggerHandler('cli-busy');
 		} else if (!working && this._spinnerTimeout) {
 			clearInterval(this._spinnerTimeout);
 			this._spinnerTimeout = null;
-			$('#spinner').fadeOut();
+			jQuery(this.config.select.spinner).fadeOut();
 			this.setPromptActive(true);
-			$('#screen').triggerHandler('cli-ready');
+			jQuery(this.config.select.screen).triggerHandler('cli-ready');
 		}
 	},
-	
-	runCommand: function(text) {
+
+        /**
+           Runs the given command. After it is run (if it is run and
+           returns), if onCompletion is-a Function then it is called
+           and passed this object.
+
+           TODO: refactor this to:
+
+           - optionally take an array of arguments, to avoid
+           tokenization problems.
+
+           - Do smarter tokenization by default, instead of simply
+           split()ing on spaces.
+        */
+	runCommand: function(text,onCompletion) {
 		var index = 0;
 		var mine = false;
 		
 		this.promptActive = false;
+                var self = this;
 		var interval = window.setInterval($.proxy(function typeCharacter() {
 			if (index < text.length) {
 				this.addCharacter(text.charAt(index));
@@ -465,12 +507,16 @@ var Terminal = {
 				clearInterval(interval);
 				this.promptActive = true;
 				this.processInputBuffer();
+                                if( onCompletion instanceof Function )
+                                {
+                                    onCompletion(self);
+                                }
 			}
 		}, this), this.config.typingSpeed);
 	}
 };
 
-$(document).ready(function() {
+jQuery(document).ready(function() {
 	$('#welcome').show();
 	// Kill Opera's backspace keyboard action.
 	document.onkeydown = document.onkeypress = function(e) { return $.hotkeys.specialKeys[e.keyCode] != 'backspace'; };
