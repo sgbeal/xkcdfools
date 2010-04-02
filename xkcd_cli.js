@@ -586,6 +586,7 @@ TerminalShell.fallback = function(terminal, cmd) {
 var konamiCount = 0;
 $(document).ready(function() {
 	Terminal.promptActive = false;
+        $('#welcome').show();
 	$('#screen').bind('cli-load', function(e) {
                 function evilbad() {
 			Terminal.print($('<p>').addClass('error').text('Unable to load startup data. :-('));
