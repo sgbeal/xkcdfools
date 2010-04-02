@@ -534,7 +534,7 @@ var Terminal = {
 };
 
 jQuery(document).ready(function() {
-    // Kill Opera's backspace keyboard action.          
-    document.onkeydown = document.onkeypress = function(e) { return $.hotkeys.specialKeys[e.keyCode] != 'backspace'; };
-    Terminal.init();
+	// Kill Opera's backspace keyboard action.
+	document.onkeydown = document.onkeypress = function(e) { return $.hotkeys.specialKeys[e.keyCode] != 'backspace'; };
+	Terminal.init();
 });
