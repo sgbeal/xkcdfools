@@ -587,16 +587,25 @@ var konamiCount = 0;
 $(document).ready(function() {
 	Terminal.promptActive = false;
 	$('#screen').bind('cli-load', function(e) {
-		xkcd.get(null, function(data) {
-			xkcd.latest = data;
-			$('#screen').one('cli-ready', function(e) {
-				Terminal.runCommand('cat welcome.txt');
-			});
-			Terminal.runCommand('display '+xkcd.latest.num+'/'+pathFilename(xkcd.latest.img));
-		}, function() {
+                function evilbad() {
 			Terminal.print($('<p>').addClass('error').text('Unable to load startup data. :-('));
 			Terminal.promptActive = true;
-		});
+                };
+                try
+                {
+                    xkcd.get(null, function(data) {
+                                 xkcd.latest = data;
+                                 $('#screen').one('cli-ready', function(e) {
+                                                      Terminal.runCommand('cat welcome.txt');
+                                                  });
+                                 if( ! data ) evilbad();
+                                 else Terminal.runCommand('display '+xkcd.latest.num+'/'+pathFilename(xkcd.latest.img));
+                             }, evilbad );
+                }
+                catch(e)
+                {
+                    evilbad();
+                }
 	});
 	
 	$(document).konami(function(){
