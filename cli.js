@@ -18,11 +18,16 @@ var TerminalShell = {
 			terminal.print(jQuery('<h3>Available commands:</h3>'));
 			cmd_list = jQuery('<ul>');
 			$.each(this.commands, function(name, func) {
+                                   var a = jQuery('<a href="#">');
+                                   a.text(name);
+                                   a.click( function(e) { terminal.runCommand(name); } );
+                                   var lbl = jQuery('<span>');
+                                   lbl.append(a);
                                    if( 'shortHelp' in func )
                                    {
-                                       name = name + '&nbsp;&nbsp;--&gt;&nbsp;&nbsp;'+func.shortHelp;
+                                       lbl.append('&nbsp;&nbsp;--&gt;&nbsp;&nbsp;'+func.shortHelp);
                                    }
-                                   cmd_list.append(jQuery('<li>').html(name));
+                                   cmd_list.append(jQuery('<li>').html(lbl));
 			});
 			terminal.print(cmd_list);
 		}, 
