@@ -14,22 +14,37 @@
 
 var TerminalShell = {
 	commands: {
-		help: function help(terminal) {
-			terminal.print(jQuery('<h3>Available commands:</h3>'));
-			cmd_list = jQuery('<ul>');
-			$.each(this.commands, function(name, func) {
-                                   var a = jQuery('<a href="#">');
-                                   a.text(name);
-                                   a.click( function(e) { terminal.runCommand(name); } );
-                                   var lbl = jQuery('<span>');
-                                   lbl.append(a);
-                                   if( 'shortHelp' in func )
-                                   {
-                                       lbl.append('&nbsp;&nbsp;--&gt;&nbsp;&nbsp;'+func.shortHelp);
-                                   }
-                                   cmd_list.append(jQuery('<li>').html(lbl));
-			});
-			terminal.print(cmd_list,'<br>');
+		help: function help(term) {
+                        // this == TerminalShell
+			term.print(jQuery('<h3>Available commands:</h3>'));
+			var cmd_list = jQuery('<ul>');
+                        var ar = [];
+                        var key;
+                        for( key in this.commands )
+                        {
+                            //ar[key] = this.commands[key];
+                            ar.push({name:key,func:this.commands[key]});
+                        }
+                        ar.sort( function(l,r){
+                                     return l.name.localeCompare(r.name);
+                                });
+                        for( key = 0; key < ar.length; ++key )
+                        {
+                            var a = jQuery('<a href="#">');
+                            var obj = ar[key];
+                            var func = obj.func;
+                            var name = obj.name;
+                            a.text(name);
+                            a.click( function(e) { term.runCommand(name); } );
+                            var lbl = jQuery('<span>');
+                            lbl.append(a);
+                            if( 'shortHelp' in func )
+                            {
+                                lbl.append('&nbsp;&nbsp;--&gt;&nbsp;&nbsp;'+func.shortHelp);
+                            }
+                            cmd_list.append(jQuery('<li>').append(lbl));
+                        }
+			term.print(cmd_list,'<br>');
 		}, 
 		clear: function(terminal) {
 			terminal.clear();
@@ -86,6 +101,8 @@ var Terminal = {
 		spinnerCharacters:	['[   ]','[.  ]','[.. ]','[...]'],
 		spinnerSpeed:		250,
 		typingSpeed:		50,
+                componentPath/* relative URL path, WITH trailing slash, to runtime-loadable components.*/: '',
+                debug/*setting this to true enables the debug() function*/:false,
                 select:{
                     screen:'#screen',
                     display:'#display',
@@ -148,9 +165,10 @@ var Terminal = {
 		}
 		jQuery(document)
 			.keypress($.proxy(ifActive(function(e) {	
+                                var character, letter;
 				if (e.which >= 32 && e.which <= 126) {   
-					var character = String.fromCharCode(e.which);
-					var letter = character.toLowerCase();
+					character = String.fromCharCode(e.which);
+					letter = character.toLowerCase();
 				} else {
 					return;
 				}
@@ -518,7 +536,7 @@ var Terminal = {
 	},
 
         /** When the terminal is 'working', it displays a "waiting..." animation
-            defined in this.config.spinnerCharacters. When the normal is
+            defined in this.config.spinnerCharacters. When the terminal is
             not "working", the animation is disabled.
         */
 	setWorking: function(working) {
@@ -611,7 +629,32 @@ var Terminal = {
                     command = [x];
                 }
                 doList(command);
-	}
+        },
+        /**
+           Loads the script this.config.componentPath+'cli.'+name+'.js'
+           via AJAX and executes it. The script is ASSUMED
+           to contain code which adds new commands to this object.
+        */
+        loadCommandSet: function(name)
+        {
+            var src = this.config.componentPath+'cli.'+name+'.js';
+            var self = this;
+            self.debug("Loading script ["+src+"]...");
+            jQuery.getScript( src, function() {
+                                  self.debug("Loaded command set ["+name+"].");
+                              });
+        },
+        /** Works like print() but only outputs if this.config.debug
+            is true.
+        */
+        debug: function()
+        {
+            if( this.config.debug ) {
+                var av = Array.prototype.slice.apply(arguments,[0]);
+                av.unshift( 'DEBUG:');
+                this.print.apply( this, av );
+            }
+        }
 };
 /**
    If Terminal.runCommand.animate is false then Terminal.runCommand() will
