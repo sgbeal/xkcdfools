@@ -16,7 +16,6 @@ var TerminalShell = {
 	commands: {
 		help: function help(term) {
                         // reminder: this == TerminalShell
-			term.print(jQuery('<h3>Available commands:</h3>'));
                         var ar = [];
                         var key;
                         for( key in this.commands )
@@ -28,14 +27,21 @@ var TerminalShell = {
                                 });
                         var tbl, td, tr;
                         tbl = jQuery('<table border="0">');
+                        tr = jQuery('<tr>').addClass('odd');
+                        tbl.append(tr);
+                        tr.append( jQuery('<th>').text("Command") )
+                          .append( jQuery('<th>').text("Description") )
+                        ;
                         for( key = 0; key < ar.length; ++key )
                         {
-                            tr = jQuery('<tr>');
+                            tr = jQuery('<tr>').addClass( (key%2) ? 'odd' : 'even' );
                             tbl.append(tr);
                             var a = jQuery('<a href="#">');
                             var obj = ar[key];
                             a.text(obj.name);
-                            a.click( function(e) { term.runCommand(obj.name); } );
+                            a.click( function click() {
+                                term.runCommand( jQuery(this).text() );
+                            } );
                             td = jQuery('<td>');
                             tr.append( td.append(a) );
                             td = jQuery('<td>');
