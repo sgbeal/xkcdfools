@@ -363,7 +363,11 @@ var Terminal = {
 		}
 		this.setCursorState(true);
 	},
-	
+
+        /**
+           Adjusts the cursor position by the given relative number of
+           characters.
+        */
 	moveCursor: function(val) {
 		this.setPos(this.pos + val);
 	},
@@ -416,6 +420,22 @@ var Terminal = {
 		jqscr.scrollTop(jqscr.scrollTop() + num * this.config.scrollStep);
 	},
 
+        /**
+           Works similarly to conventional print() routines...
+
+           Each argument is appended to the display area
+           (jQuery(this.config.select.display)), with a single
+           space between them.
+
+           Arguments may be:
+
+           - a jQuery object is appended as-is.
+
+           - a Function is called and its return value used as content.
+
+           - Anything else is assumed have a graceful toString()
+           operation, and it will be treated as HTML.
+        */
 	print: function() {
             var prpush = arguments.callee.prpush;
             var pr = arguments.callee.pr;
@@ -446,6 +466,7 @@ var Terminal = {
             }
             pr(out);
 	},
+        /** Trims leading whitespace from value. */
         ltrim:function (value) {
              if (value) {
                  var re = /\s*((\S+\s*)*)/;
@@ -453,6 +474,7 @@ var Terminal = {
              }
              return '';
         },
+        /** Trims trailing whitespace from value. */
         rtrim:function(value) {
             /* rtrim(), ltrim(), trim() came from http://snippets.dzone.com/posts/show/701 */
 	    if (value) {
@@ -461,11 +483,17 @@ var Terminal = {
             }
             return '';
         },
+        /** Trims leading/trailing whitespace from value. */
 	trim:function(value) {
                  return (value)
                  ? this.ltrim(this.rtrim(value))
                  : '';
         },
+        /**
+           Processes the current contents of the CLI buffer, clearing
+           the buffer and dispatching the buffer to a command handler
+           based on its first token.
+        */
 	processInputBuffer: function() {
                 var prompt = (this.config.prompt instanceof jQuery)
                     ? this.config.prompt.html(/*clone needed to avoid event-handling weirdness*/)
@@ -488,11 +516,18 @@ var Terminal = {
 		this.promptActive = active;
 		jQuery(this.config.select.inLine).toggle(this.promptActive);
 	},
-	
+
+        /** When the terminal is 'working', it displays a "waiting..." animation
+            defined in this.config.spinnerCharacters. When the normal is
+            not "working", the animation is disabled.
+        */
 	setWorking: function(working) {
 		if (working && !this._spinnerTimeout) {
-			jQuery(this.config.select.display+' .command:last-child').add(this.config.select.bottomLine).first().append(jQuery(this.config.select.spinner));
-			this._spinnerTimeout = window.setInterval($.proxy(function() {
+                    jQuery(this.config.select.display+' .command:last-child')
+                        .add(jQuery(this.config.select.bottomLine))
+                        .last()
+                        .append(jQuery(this.config.select.spinner));
+                    this._spinnerTimeout = window.setInterval($.proxy(function() {
 				if (!jQuery(this.config.select.spinner).is(':visible')) {
 					jQuery(this.config.select.spinner).fadeIn();
 				}
@@ -509,7 +544,6 @@ var Terminal = {
 			jQuery(this.config.select.screen).triggerHandler('cli-ready');
 		}
 	},
-
         /**
            Runs a command in the form "command [arg1 ... argN]".
            After it is run (if it is run and returns), if onCompletion
