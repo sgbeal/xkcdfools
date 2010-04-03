@@ -591,6 +591,7 @@ $(document).ready(function() {
                 function evilbad() {
 			Terminal.print($('<p>').addClass('error').text('Unable to load startup data. :-('));
 			Terminal.promptActive = true;
+                        Terminal.runCommand('cat welcome.txt');
                 };
                 try
                 {
