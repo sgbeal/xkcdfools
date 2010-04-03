@@ -17,7 +17,6 @@ var TerminalShell = {
 		help: function help(term) {
                         // this == TerminalShell
 			term.print(jQuery('<h3>Available commands:</h3>'));
-			var cmd_list = jQuery('<ul>');
                         var ar = [];
                         var key;
                         for( key in this.commands )
@@ -28,23 +27,30 @@ var TerminalShell = {
                         ar.sort( function(l,r){
                                      return l.name.localeCompare(r.name);
                                 });
+                        var tbl, td, tr;
+                        tbl = jQuery('<table border="0">');
                         for( key = 0; key < ar.length; ++key )
                         {
+                            tr = jQuery('<tr>');
+                            tbl.append(tr);
                             var a = jQuery('<a href="#">');
                             var obj = ar[key];
                             var func = obj.func;
                             var name = obj.name;
                             a.text(name);
                             a.click( function(e) { term.runCommand(name); } );
-                            var lbl = jQuery('<span>');
-                            lbl.append(a);
+                            //var lbl = jQuery('<span>');
+                            //lbl.append(a);
+                            td = jQuery('<td>');
+                            tr.append( td.append(a) );
+                            td = jQuery('<td>');
+                            tr.append(td);
                             if( 'shortHelp' in func )
                             {
-                                lbl.append('&nbsp;&nbsp;--&gt;&nbsp;&nbsp;'+func.shortHelp);
+                                td.append(func.shortHelp);
                             }
-                            cmd_list.append(jQuery('<li>').append(lbl));
                         }
-			term.print(cmd_list,'<br>');
+			term.print(tbl,'<br>');
 		}, 
 		clear: function(terminal) {
 			terminal.clear();
