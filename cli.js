@@ -123,7 +123,18 @@ var Terminal = {
 			$.each(this.keys, $.proxy(function(name, value) {
 				this.reset(name);
 			}, this));
-		}
+                },
+                keymap:{
+                    ctrl:{
+                    w:function(term) { term.deleteWord(); },
+                    h:function(term){ term.deleteCharacter(false);},
+                    l:function(term){ term.clear(); },
+                    a:function(term){ term.setPos(0); },
+                    e:function(term){ term.setPos(term.buffer.length); },
+                    d:function(term){ term.runCommand('logout'); },
+                    }/*ctrl*/
+                }/*keymap*/
+                
 	},
 	
 	init: function() {
@@ -149,6 +160,12 @@ var Terminal = {
 				}
 				
 				if (this.sticky.keys.ctrl) {
+                                    if( this.sticky.keymap && this.sticky.keymap.ctrl )  {
+                                        if( letter in this.sticky.keymap.ctrl ) {
+                                            this.sticky.keymap.ctrl[letter]( this );
+                                        }
+                                    }
+                                    else  {
 					if (letter == 'w') {
 						this.deleteWord();
 					} else if (letter == 'h') {
@@ -162,6 +179,7 @@ var Terminal = {
 					} else if (letter == 'd') {
 						this.runCommand('logout');
 					}
+                                    }
 				} else {
 					if (character) {
 						this.addCharacter(character);
