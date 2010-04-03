@@ -51,7 +51,7 @@ var TerminalShell = {
 			if (this.commands.hasOwnProperty(cmd_name)) {
 				this.commands[cmd_name].apply(this, cmd_args);
 			} else {
-				if (!(this.fallback && this.fallback(terminal, cmd))) {
+				if (!(this.fallback && this.fallback(terminal,cmd))) {
 					terminal.print('Unrecognized command. Type "help" for assistance.');
 				}
 			}
@@ -505,27 +505,49 @@ var Terminal = {
 	runCommand: function(command,onCompletion) {
 		this.promptActive = false;
                 var self = this;
+                var doAnimate = arguments.callee.animate;
                 function doList(av)
                 {
                     var index = 0;
                     var item = av[0];
                     av.shift();
-                    var interval = window.setInterval(
-                           $.proxy(function typeCharacter() {
-                                       if (index < item.length) {
-                                           self.addCharacter(item.charAt(index));
-                                           index += 1;
-                                       } else {
-                                           clearInterval(interval);
-                                           self.processInputBuffer();
-                                           if( av.length ) return doList(av);
-                                           self.promptActive = true;
-                                           if( onCompletion instanceof Function )
-                                           {
-                                               onCompletion(self);
-                                           }
-                                       }
-                                   }, self), self.config.typingSpeed);
+                    if(doAnimate)
+                    {
+                        self.clearInputBuffer();
+                        function typeCharacter() {
+                            if (index < item.length) {
+                                self.addCharacter(item.charAt(index));
+                                ++index;
+                            } else {
+                                clearInterval(interval);
+                                self.processInputBuffer();
+                                if( av.length ) return doList(av);
+                                self.promptActive = true;
+                                if( onCompletion instanceof Function )
+                                {
+                                    onCompletion(self);
+                                }
+                            }
+                        };
+                        var interval = window.setInterval( typeCharacter, self.config.typingSpeed);
+                    }
+                    else
+                    {
+                        var i = 0;
+                        self.clearInputBuffer();
+                        for( ; i < item.length; ++i )
+                        {
+                            self.addCharacter(item.charAt(i));
+                            ++index;
+                        }
+                        self.processInputBuffer();
+                        if( av.length ) return doList(av);
+                        self.promptActive = true;
+                        if( onCompletion instanceof Function )
+                        {
+                            onCompletion(self);
+                        }
+                    }
                 }
                 if( ! jQuery.isArray(command) )
                 {
@@ -535,7 +557,11 @@ var Terminal = {
                 doList(command);
 	}
 };
-
+/**
+   If Terminal.runCommand.animate is false then Terminal.runCommand() will
+   not animate the typing-out of commands passed to it.
+ */
+Terminal.runCommand.animate = true;
 jQuery(document).ready(function() {
 	// Kill Opera's backspace keyboard action.
 	document.onkeydown = document.onkeypress = function(e) { return $.hotkeys.specialKeys[e.keyCode] != 'backspace'; };
