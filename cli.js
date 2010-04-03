@@ -29,7 +29,7 @@ var TerminalShell = {
                                    }
                                    cmd_list.append(jQuery('<li>').html(lbl));
 			});
-			terminal.print(cmd_list);
+			terminal.print(cmd_list,'<br>');
 		}, 
 		clear: function(terminal) {
 			terminal.clear();
@@ -444,7 +444,7 @@ var Terminal = {
             {
                 prpush = arguments.callee.prpush = function(jout,item) {
                     if( item instanceof Function ) item = item();
-                    //if( jQuery.isArray(item) ) item = item.join(' ');
+                    else if( ! (item instanceof jQuery) ) item = ''+item;
                     if( item ) jout.append(item);
                 }
                 pr = arguments.callee.pr = function(obj) {
