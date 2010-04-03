@@ -252,6 +252,10 @@ var Terminal = {
 			jqscr.triggerHandler('cli-load');
 		});
 	},
+        /**
+           Sets the terminal's prompt. p may be any object which can
+           be passed as the first argument to jQuery.append().
+        */
 	setPrompt: function(p)
         {
             this.config.prompt = p;
@@ -351,7 +355,7 @@ var Terminal = {
 			while (ncp > 0 && this.buffer.charAt(ncp) !== ' ') {
 				ncp--;
 			}
-			left = this.buffer.substr(0, ncp - 1);
+			left = this.buffer.substr(0, ncp);
 			right = this.buffer.substr(ncp, this.buffer.length - this.pos);
 			this.buffer = left + right;
 			this.pos = ncp;
