@@ -446,7 +446,7 @@ var Terminal = {
         },
 	processInputBuffer: function() {
                 var prompt = (this.config.prompt instanceof jQuery)
-                    ? this.config.prompt.clone(/*clone needed to avoid event-handling weirdness*/)
+                    ? this.config.prompt.html(/*clone needed to avoid event-handling weirdness*/)
                     : ''+this.config.prompt;
                 this.print(jQuery('<p>').addClass('command').append(prompt).append(this.buffer));
                 var cmd = this.trim(this.buffer);
