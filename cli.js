@@ -15,13 +15,12 @@
 var TerminalShell = {
 	commands: {
 		help: function help(term) {
-                        // this == TerminalShell
+                        // reminder: this == TerminalShell
 			term.print(jQuery('<h3>Available commands:</h3>'));
                         var ar = [];
                         var key;
                         for( key in this.commands )
                         {
-                            //ar[key] = this.commands[key];
                             ar.push({name:key,func:this.commands[key]});
                         }
                         ar.sort( function(l,r){
@@ -35,19 +34,15 @@ var TerminalShell = {
                             tbl.append(tr);
                             var a = jQuery('<a href="#">');
                             var obj = ar[key];
-                            var func = obj.func;
-                            var name = obj.name;
-                            a.text(name);
-                            a.click( function(e) { term.runCommand(name); } );
-                            //var lbl = jQuery('<span>');
-                            //lbl.append(a);
+                            a.text(obj.name);
+                            a.click( function(e) { term.runCommand(obj.name); } );
                             td = jQuery('<td>');
                             tr.append( td.append(a) );
                             td = jQuery('<td>');
                             tr.append(td);
-                            if( 'shortHelp' in func )
+                            if( 'shortHelp' in obj.func )
                             {
-                                td.append(func.shortHelp);
+                                td.append(obj.func.shortHelp);
                             }
                         }
 			term.print(tbl,'<br>');
