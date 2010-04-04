@@ -326,8 +326,7 @@ var Terminal = {
                       function(term) { term.runCommand("foo"); };
 
                     Note that not all keys are configurable: some
-                    browsers unconditionally intercept certain keys
-                    (e.g. Ctrl-W typically closes the current tab).
+                    browsers unconditionally intercept certain keys.
                 */
                 keymap:{
                     ctrl:{
