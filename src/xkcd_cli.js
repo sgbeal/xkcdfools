@@ -586,28 +586,22 @@ TerminalShell.fallback = function(terminal, cmd) {
 var konamiCount = 0;
 $(document).ready(function() {
 	Terminal.promptActive = false;
-        $('#welcome').show();
+	function noData() {
+		Terminal.print($('<p>').addClass('error').text('Unable to load startup data. :-('));
+		Terminal.promptActive = true;
+	}
 	$('#screen').bind('cli-load', function(e) {
-                function evilbad() {
-			Terminal.print($('<p>').addClass('error').text('Unable to load startup data. :-('));
-			Terminal.promptActive = true;
-                        Terminal.runCommand('cat welcome.txt');
-                };
-                try
-                {
-                    xkcd.get(null, function(data) {
-                                 xkcd.latest = data;
-                                 $('#screen').one('cli-ready', function(e) {
-                                                      Terminal.runCommand('cat welcome.txt');
-                                                  });
-                                 if( ! data ) evilbad();
-                                 else Terminal.runCommand('display '+xkcd.latest.num+'/'+pathFilename(xkcd.latest.img));
-                             }, evilbad );
-                }
-                catch(e)
-                {
-                    evilbad();
-                }
+		xkcd.get(null, function(data) {
+			if (data) {
+				xkcd.latest = data;
+				$('#screen').one('cli-ready', function(e) {
+					Terminal.runCommand('cat welcome.txt');
+				});
+				Terminal.runCommand('display '+xkcd.latest.num+'/'+pathFilename(xkcd.latest.img));
+			} else {
+				noData();
+			}
+		}, noData);
 	});
 	
 	$(document).konami(function(){
