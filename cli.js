@@ -110,6 +110,18 @@ var Terminal = {
 		typingSpeed:		50,
                 componentPath/* relative URL path, WITH trailing slash, to runtime-loadable components.*/: '',
                 debug/*setting this to true enables the debug() function*/:false,
+                /**
+                   If copyCommandLineOnExec is false then
+                   processInputBuffer() will not create a copy of the
+                   command line in the display area when it executes a
+                   command.
+
+                   Turning this off gives the visual effect of only
+                   having a single command line, without repeated copies
+                   of the prompt and entered commands in the display
+                   area.
+                 */
+                copyCommandLineOnExec:     true,
                 select:{
                     screen:'#screen',
                     display:'#display',
@@ -520,10 +532,12 @@ var Terminal = {
            based on its first token.
         */
 	processInputBuffer: function() {
-                var prompt = (this.config.prompt instanceof jQuery)
-                    ? this.config.prompt.html(/*clone needed to avoid event-handling weirdness*/)
-                    : ''+this.config.prompt;
-                this.print(jQuery('<p>').addClass('command').append(prompt).append(this.buffer));
+                if(this.config.copyCommandLineOnExec) {
+                    var prompt = (this.config.prompt instanceof jQuery)
+                        ? this.config.prompt.html(/*clone needed to avoid event-handling weirdness*/)
+                        : ''+this.config.prompt;
+                    this.print(jQuery('<p>').addClass('command').append(prompt).append(this.buffer));
+                }
                 var cmd = this.trim(this.buffer);
                 this.clearInputBuffer();
 		if (cmd.length == 0) {
@@ -576,7 +590,9 @@ var Terminal = {
 
            If command is an array it is assumed to be a list of
            command strings and they are run in order (stopping if any
-           of them throws an exception). If
+           of them throws an exception). If onCompletion is used in
+           conjunction with an array, it is only called once after
+           all commands complete successfully.
            
            TODO: refactor this to:
 
