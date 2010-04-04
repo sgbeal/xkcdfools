@@ -18,8 +18,8 @@ var xkcd = {
 	latest: null,
 	last: null,
 	cache: {},
-	base: '/',
-	
+	base: 'proxy.php?mode=native&url=http://xkcd.com/',
+        //base: '', /* for most non-xkcd installations*/
 	get: function(num, success, error) {
 		if (num == null) {
 			path = 'info.0.json';
