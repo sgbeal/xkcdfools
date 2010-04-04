@@ -7,13 +7,53 @@
  Chromakode, 2010
  http://www.chromakode.com/
 
- Minor hacking/extensions added Stephan Beal, 2010.
+ Documentation and minor hacking/extensions added Stephan Beal, 2010.
  http://wanderinghorse.net/
 
 */
 
+/**
+   The TerminalShell object defines the interface for, and acts as the
+   default implementation of, Terminal.output.
+*/
 var TerminalShell = {
+/**
+   commands is a object which maps Terminal command names to
+   functions. The functions have this signature:
+
+   function(terminal,...)
+
+   where ... are any arguments passed to the handler by the client.
+   e.g.:
+
+   @code
+   Terminal.runCommand("mycommand arg1 arg2 arg3");
+   @endcode
+
+   will trigger TerminalShell.commands.mycommand( Terminal.output,
+   arg1, arg2, arg3 ).
+
+   Inside the body of a command handler, the 'this' object refers not
+   to 'commands', but to Terminal.output (i.e. the object in which the
+   commands object lives).
+   
+   The arguments are all strings, and the Terminal object's parsing is
+   very trivial: it only supports individual tokens and not quoted
+   strings and the like.
+
+   Inside the body of a command handler the code can refer to
+   terminal.lastCommand to get the full text of the command line (the
+   same text passed to runCommand()), which can be processed using
+   other methods if the command handler requires richer argument
+   support.
+*/
 	commands: {
+        /**
+           A default 'help' implementation which lists all objects in
+           the commands object. If a member has a property named
+           'shortHelp', that string will be used as a the command's
+           description.
+        */
 		help: function help(term) {
                         // reminder: this == TerminalShell
                         var ar = [];
@@ -57,10 +97,41 @@ var TerminalShell = {
 			terminal.clear();
 		}
 	},
+        /**
+           When process() is called, for each function in filters,
+           the function is called as func(terminal,cmd), where
+           cmd is the command string passed to process(). The filter
+           must return either cmd or some "filtered" variation of
+           cmd.
+
+           This could be used to implement client-side command aliases
+           support.
+
+           Results are undefined if any member of the array
+           is not a function.
+        */
 	filters: [],
+        /** An optional command handler function which is triggered if
+            Terminal.runCommand() is passed a command it does not know.
+
+            The function has the same interface as the function
+            members of the commands object.
+        */
 	fallback: null,
-	
+	/**
+           Inside the body of a command handler function, this
+           property contains the string form of the command, as it was
+           originally passed to Terminal.runCommand(). This can be
+           used (but should not be modified directly) to perform
+           richer parsing than runCommand() supports.
+        */
 	lastCommand: null,
+        /**
+           The internal back-end for Terminal.runCommand().
+           The terminal object is Terminal from which runCommand()
+           was called. cmd is the argument string which was passed
+           to runCommand().
+        */
 	process: function(terminal, cmd) {
 		try {
 			$.each(this.filters, $.proxy(function(index, filter) {
@@ -84,32 +155,88 @@ var TerminalShell = {
 	}
 };
 
+/**
+   The Terminal object implements the basic functionality needed for
+   supporting a CLI-like interface for web applications. It works
+   together with the TerminalShell interface to provide features
+   similar to conventional Unix shells, e.g. a command-line interface.
+
+   As a general rule, members which are not documented should not be
+   used by client code. (When i got this code, none of it was
+   documented, and i haven't reverse-engineered all of the functions
+   enough to document them.)
+
+   The members which are of most interest to client code:
+
+   - Terminal.config: configuration options.
+
+   - Terminal.print(): prints output to the console.
+
+   - Terminal.runCommand(): runs a command via the console interface.
+*/
 var Terminal = {
+        /** Internal command buffer. */
 	buffer: '',
+        /** Internal cursor pos. */
 	pos: 0,
+        /** Command history (strings). */
 	history: [],
+        /** Current position in the history chain. */
 	historyPos: 0,
+        /** ??? */
 	promptActive: true,
+        /** ??? */
 	cursorBlinkState: true,
+        /** Internal setTimeout() return value holder. */
 	_cursorBlinkTimeout: null,
+        /**
+           Current index in the config.spinnerCharacters array.
+         */
 	spinnerIndex: 0,
+        /** Internal setTimeout() return value holder. */
 	_spinnerTimeout: null,
-	
+
+        /** An object which implements the TerminalShell interface. */
 	output: TerminalShell,
-	
+	/** Configurable options. */
 	config: {
+               /** ??? */
 		scrollStep:			20,
+                /** Scroll speed (ms). */
 		scrollSpeed:		100,
+                /** Background color of the cursor. */
 		bg_color:			'#000',
+                /** Foreround color of the cursor. */
 		fg_color:			'#FFF',
+                /** Cursor blink time (ms). */
 		cursor_blink_time:	700,
+                /** Cursor style. Either 'block' or any other value (which
+                    are all equivalent.
+                */
 		cursor_style:		'block',
+                /** Default prompt string. It can be any type supported as
+                    an argument to jQuery.append().
+                */
 		prompt:				'guest@console:/$ ',
+                /**
+                   A sequence which is used to generate an animation
+                   effect with the console is "busy."
+                */
 		spinnerCharacters:	['[   ]','[.  ]','[.. ]','[...]'],
+                /** Interval (in ms) between steps in spinner animations. */
 		spinnerSpeed:		250,
+                /** When the terminal outputs text, the interval between
+                    individual characters is defined by this value (in ms).
+                */
 		typingSpeed:		50,
-                componentPath/* relative URL path, WITH trailing slash, to runtime-loadable components.*/: '',
-                debug/*setting this to true enables the debug() function*/:false,
+                /* Relative URL path, WITH trailing slash, to runtime-loadable components.*/
+                componentPath: '',
+                /*
+                  Setting this to true enables the Terminal.debug()
+                  function. If this value is false, Terminal.debug()
+                  is a no-op.
+                */
+                debug:false,
                 /**
                    If copyCommandLineOnExec is false then
                    processInputBuffer() will not create a copy of the
@@ -122,6 +249,15 @@ var Terminal = {
                    area.
                  */
                 copyCommandLineOnExec:     true,
+                /**
+                   The collection of jQuery selectors used
+                   for the various UI components needed by
+                   the framework.
+
+                   TODO: document each of these. For now, the
+                   demo/sample page included with this class'
+                   source code must suffice.
+                */
                 select:{
                     screen:'#screen',
                     display:'#display',
@@ -134,8 +270,18 @@ var Terminal = {
                     rCommand:'#rcommand'
                 }
 	},
-	
+
+        /**
+           Internal state regarding the use of "sticky" key modifiers
+           for ctrl, alt, and (believe it or not) Scroll-Lock (only
+           the second time ever i've seen that key used).
+        */
 	sticky: {
+                /**
+                   These values mark whether a given
+                   key is currently in sticky mode
+                   or not.
+                 */
 		keys: {
 			ctrl: false,
 			alt: false,
@@ -160,6 +306,29 @@ var Terminal = {
 				this.reset(name);
 			}, this));
                 },
+                /**
+                   A client-configurable map of keys for sticky-mode.
+
+                   Currently only the keymap.ctrl entry is honored by
+                   Terminal.
+
+                   Keymaps are keyed on a single lower-case letter and
+                   their value is a function with the signature:
+
+                   function(terminal)
+
+                   it gets passed the Terminal object on whos behalf
+                   the keymap is acting.
+
+                   e.g. to configure Ctrl-X to run the command "foo":
+
+                   Terminal.sticky.keymap.ctrl.x =
+                      function(term) { term.runCommand("foo"); };
+
+                    Note that not all keys are configurable: some
+                    browsers unconditionally intercept certain keys
+                    (e.g. Ctrl-W typically closes the current tab).
+                */
                 keymap:{
                     ctrl:{
                     w:function(term) { term.deleteWord(); },
@@ -172,7 +341,27 @@ var Terminal = {
                 }/*keymap*/
                 
 	},
-	
+
+        /**
+           Philosophically speaking, init() must be called one time by
+           clients before they start using Terminal. That said, the
+           default distro of these sources do it themselves by
+           registering a jQuery(document).ready() handler.
+
+           When initialization is complete, an event 'cli-load' is
+           triggered via the jQuery(this.config.select.screen) object.
+
+           If the client needs to customize Terminal.config entries,
+           note that some of them (namely the config.select entries)
+           must be configured before init() is called. Thus
+           client-side configuration should take place via
+           global-scope code, and not as part of an onload() handler
+           (which may be triggered after init() is called). For
+           example, add the following line to your script's global
+           code to change the ID used for the "screen" UI element:
+
+           Terminal.config.select.screen = '#myCustomScreen';
+        */
 	init: function() {
                 var term = this;
 		function ifActive(func) {
@@ -303,15 +492,15 @@ var Terminal = {
                 var jqcurs = jQuery(this.config.select.cursor);
 		if (this.config.cursor_style == 'block') {
 			if (state) {
-				jQuery(jqcurs).css({color:this.config.bg_color, backgroundColor:this.config.fg_color});
+				jqcurs.css({color:this.config.bg_color, backgroundColor:this.config.fg_color});
 			} else {
-				jQuery(jqcurs).css({color:this.config.fg_color, background:'none'});
+				jqcurs.css({color:this.config.fg_color, background:'none'});
 			}
 		} else {
 			if (state) {
-				jQuery(jqcurs).css('textDecoration', 'underline');
+				jqcurs.css('textDecoration', 'underline');
 			} else {
-				jQuery(jqcurs).css('textDecoration', 'none');
+				jqcurs.css('textDecoration', 'none');
 			}
 		}
 		
@@ -360,7 +549,10 @@ var Terminal = {
 		this.pos = 0;
 		this.updateInputDisplay();
 	},
-	
+
+        /** Clears the contents of the whole terminal GUI, leaving one
+            with only a prompt.
+        */
 	clear: function() {
 		jQuery(this.config.select.display).html('');
 	},
@@ -593,6 +785,17 @@ var Terminal = {
            of them throws an exception). If onCompletion is used in
            conjunction with an array, it is only called once after
            all commands complete successfully.
+
+
+           The forst token of each command string must be a member of
+           this.output.commands and must be a function following the
+           TerminalShell.commands interface.
+
+           If no such command is found, this.output.fallback (if
+           set) is called and passed ( this, commandString ).
+
+           See TerminalShell.commands for more documentation
+           on the command interface.
            
            TODO: refactor this to:
 
@@ -654,21 +857,24 @@ var Terminal = {
                 doList(command);
         },
         /**
-           Loads the script this.config.componentPath+'cli.'+name+'.js'
-           via AJAX and executes it. The script is ASSUMED
-           to contain code which adds new commands to this object.
+           Loads the remote JavaScript script
+           this.config.componentPath+'cli.'+name+'.js' via AJAX and
+           executes it. The script is ASSUMED to contain code which
+           adds new commands to this object.
         */
         loadCommandSet: function(name)
         {
             var src = this.config.componentPath+'cli.'+name+'.js';
             var self = this;
-            self.debug("Loading script ["+src+"]...");
+            self.debug("Loading command set ["+src+"]...");
             jQuery.getScript( src, function() {
                                   self.debug("Loaded command set ["+name+"].");
                               });
         },
         /** Works like print() but only outputs if this.config.debug
-            is true.
+            is true. Each line of output is prefixed by an unspecified
+            string (e.g. "DEBUG:") to differentiate the output from
+            that of print().
         */
         debug: function()
         {
@@ -680,9 +886,9 @@ var Terminal = {
         }
 };
 /**
-   If Terminal.runCommand.animate is false then Terminal.runCommand() will
-   not animate the typing-out of commands passed to it.
- */
+   If Terminal.runCommand.animate is false then Terminal.runCommand()
+   will not animate the typing-out of commands passed to it.
+*/
 Terminal.runCommand.animate = true;
 jQuery(document).ready(function() {
 	// Kill Opera's backspace keyboard action.
