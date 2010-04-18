@@ -152,7 +152,32 @@ var TerminalShell = {
 			terminal.print(jQuery('<p>').addClass('error').text('Command "'+cmd+'" threw: '+e));
 			terminal.setWorking(false);
 		}
-	}
+	},
+    suggestCompletion: function(terminal, segment) {
+        // code taken from: http://github.com/intangir/xkcdfools/commit/780652b51f186f62f802fefaece85816f6aa054e
+        if(!segment)
+            return;
+        var suggestions = [];
+        $.each(this.tabSuggestions(), function(name) {
+            if(segment == name.substr(0,segment.length)) {
+                suggestions.push(name);
+            }
+        });
+        if(suggestions.length > 1)
+        {
+            terminal.print($('<p>').addClass('command').text(terminal.config.prompt + terminal.buffer));
+            suggestions.forEach(function(suggestion) {
+                terminal.print(suggestion);
+            });
+            return;            
+        } else if(suggestions[0]) {
+            return suggestions[0];
+        }
+        return;
+    },
+    tabSuggestions: function() {
+        return this.commands;
+    }
 };
 
 /**
@@ -168,11 +193,14 @@ var TerminalShell = {
 
    The members which are of most interest to client code:
 
-   - Terminal.config: configuration options.
+   - Terminal.config configuration options.
 
-   - Terminal.print(): prints output to the console.
+   - Terminal.print() prints output to the console.
 
-   - Terminal.runCommand(): runs a command via the console interface.
+   - Terminal.runCommand() runs a command via the console interface.
+
+   - Terminal.clear() clears the console (like Ctrl-L in many Unix
+   shells).
 */
 var Terminal = {
         /** Internal command buffer. */
@@ -326,7 +354,8 @@ var Terminal = {
                       function(term) { term.runCommand("foo"); };
 
                     Note that not all keys are configurable: some
-                    browsers unconditionally intercept certain keys.
+                    browsers unconditionally intercept certain keys
+                    (e.g. Ctrl-W typically closes the current tab).
                 */
                 keymap:{
                     ctrl:{
@@ -455,9 +484,13 @@ var Terminal = {
 					term.setPos(term.buffer.length);
 				}
 			}))
-			.bind('keydown', 'tab', function(e) {
+/*			.bind('keydown', 'tab', function(e) {
 				e.preventDefault();
-			})
+			})*/
+            .bind('keydown', 'tab', ifActive(function(e) {
+                e.preventDefault();
+                term.tabComplete();
+            }))
 			.keyup(function(e) {
 				var keyName = $.hotkeys.specialKeys[e.which];
 				if (keyName in {'ctrl':true, 'alt':true, 'scroll':true}) {
@@ -623,7 +656,25 @@ var Terminal = {
 		}
 		this.setCursorState(true);
 	},
-	
+    tabComplete: function() {
+        var left = this.buffer.substr(0, this.pos);
+        var right = this.buffer.substr(this.pos, this.buffer.length - this.pos);
+        var tabbed = left.split(' ').pop();
+
+        var suggestion = this.output.suggestCompletion(this, tabbed);
+        if (!suggestion) {
+            return;
+        }
+
+        this.buffer = left + suggestion.substr(tabbed.length) + right;
+        this.pos+= suggestion.length - tabbed.length;
+        if(right.length == 0) {
+            this.buffer += ' ';
+            this.pos++;
+        }
+        this.updateInputDisplay();
+        this.setCursorState(true);
+    },
 	addHistory: function(cmd) {
 		this.historyPos = this.history.push(cmd);
 	},
